@@ -6,6 +6,7 @@
     <title>نظام إدارة شكاوى الطلاب</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --gold-primary: #D4AF37;
@@ -357,6 +358,24 @@
             0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7); }
             50% { box-shadow: 0 0 20px 10px rgba(212, 175, 55, 0); }
         }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printableReport, #printableReport * {
+                visibility: visible;
+            }
+            #printableReport {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .print-hide {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -378,6 +397,9 @@
                 </button>
                 <button onclick="showChangePassword()" class="btn-secondary" id="changePassBtn" style="display: none;">
                     🔑 تغيير كلمة المرور
+                </button>
+                <button onclick="showUserManagement()" class="btn-secondary" id="userMgmtBtn" style="display: none;">
+                    👥 إدارة المستخدمين
                 </button>
                 <button onclick="showSettings()" class="btn-secondary" id="settingsBtn" style="display: none;">
                     ⚙️ الإعدادات
@@ -447,6 +469,52 @@
             </div>
         </div>
 
+        <!-- User Management Section (Admin Only) -->
+        <div id="userManagementSection" class="hidden">
+            <div class="card max-w-6xl mx-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold" style="color: var(--gold-dark);">👥 إدارة المستخدمين</h2>
+                    <button onclick="hideUserManagement()" class="btn-secondary">رجوع</button>
+                </div>
+
+                <div class="card mb-6" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
+                    <h3 class="text-xl font-bold mb-4" style="color: var(--gold-dark);">➕ إضافة مستخدم جديد</h3>
+                    <div class="grid md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label class="label">اسم المستخدم</label>
+                            <input type="text" id="newUserUsername" class="input-field">
+                        </div>
+                        <div>
+                            <label class="label">كلمة المرور</label>
+                            <input type="password" id="newUserPassword" class="input-field">
+                        </div>
+                        <div>
+                            <label class="label">الدور</label>
+                            <select id="newUserRole" class="input-field">
+                                <option value="employee">👨‍💼 الموظف</option>
+                                <option value="reviewer">👁️ المتابع</option>
+                                <option value="admin">👑 المدير</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="addNewUser()" class="btn-primary">✅ إضافة المستخدم</button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>اسم المستخدم</th>
+                                <th>الدور</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <!-- Settings Section (Admin Only) -->
         <div id="settingsSection" class="hidden">
             <div class="card max-w-4xl mx-auto">
@@ -454,61 +522,17 @@
                     <svg class="w-8 h-8" fill="var(--gold-primary)" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
                     </svg>
-                    <h2 class="text-2xl font-bold" style="color: var(--gold-dark);">⚙️ إعدادات النظام (المدير فقط)</h2>
+                    <h2 class="text-2xl font-bold" style="color: var(--gold-dark);">⚙️ إعدادات النظام</h2>
                 </div>
                 
                 <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px dashed var(--gold-primary); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
                     <h3 class="text-xl font-bold mb-4" style="color: var(--gold-dark);">🔗 اختر طريقة التخزين:</h3>
                     <select id="storageMethod" class="input-field mb-4" onchange="updateStorageConfig()">
-                        <option value="local">Local Storage - تخزين محلي</option>
-                        <option value="powerautomate">Power Automate - أتمتة مايكروسوفت</option>
-                        <option value="api">Python API - سيرفر محلي</option>
+                        <option value="local">Local Storage</option>
+                        <option value="powerautomate">Power Automate</option>
+                        <option value="api">Python Api</option>
                         <option value="graphapi">Microsoft Graph API</option>
                     </select>
-                </div>
-
-                <!-- Power Automate Config -->
-                <div id="powerAutomateConfig" class="hidden mb-6">
-                    <h4 class="font-bold mb-2">🔧 إعداد Power Automate</h4>
-                    <label class="label">رابط Flow URL:</label>
-                    <input type="text" id="flowUrl" class="input-field" placeholder="https://prod-xx.westus.logic.azure.com:443/workflows/...">
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">📝 الحصول على الرابط: Power Automate → Flow → عند استلام طلب HTTP → انسخ HTTP POST URL</p>
-                </div>
-
-                <!-- API Config -->
-                <div id="apiConfig" class="hidden mb-6">
-                    <h4 class="font-bold mb-2">🔧 إعداد Python API</h4>
-                    <label class="label">عنوان السيرفر:</label>
-                    <input type="text" id="apiUrl" class="input-field" placeholder="http://192.168.1.100:5000" value="http://localhost:5000">
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">📝 مثال: http://192.168.1.100:5000 (استبدل بـ IP السيرفر)</p>
-                    <button onclick="testApiConnection()" class="btn-primary mt-3">اختبار الاتصال</button>
-                </div>
-
-                <!-- Graph API Config -->
-                <div id="graphApiConfig" class="hidden mb-6">
-                    <h4 class="font-bold mb-2">🔧 إعداد Microsoft Graph API</h4>
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="label">Tenant ID:</label>
-                            <input type="text" id="tenantId" class="input-field" placeholder="xxxxxxxx-xxxx-xxxx-xxxx">
-                        </div>
-                        <div>
-                            <label class="label">Client ID:</label>
-                            <input type="text" id="clientId" class="input-field" placeholder="xxxxxxxx-xxxx-xxxx-xxxx">
-                        </div>
-                        <div>
-                            <label class="label">Client Secret:</label>
-                            <input type="password" id="clientSecret" class="input-field">
-                        </div>
-                        <div>
-                            <label class="label">Drive ID:</label>
-                            <input type="text" id="driveId" class="input-field">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="label">File ID:</label>
-                            <input type="text" id="fileId" class="input-field">
-                        </div>
-                    </div>
                 </div>
 
                 <div class="flex gap-4">
@@ -533,23 +557,16 @@
             <!-- Complaint Form Section -->
             <div id="complaintFormSection" class="hidden">
                 <div class="card">
-                    <!-- Edit Mode Banner -->
                     <div id="editModeBanner" class="hidden edit-mode-banner">
-                        <h3 class="text-2xl font-bold" style="color: var(--gold-dark);">
-                            ✏️ وضع التعديل
-                        </h3>
+                        <h3 class="text-2xl font-bold" style="color: var(--gold-dark);">✏️ وضع التعديل</h3>
                         <p class="text-lg mt-2" style="color: #92400e;">
                             جاري تعديل الشكوى رقم: <strong id="editingComplaintId"></strong>
                         </p>
                     </div>
 
-                    <h2 class="text-2xl font-bold mb-6" id="formTitle" style="color: var(--gold-dark);">
-                        ➕ تسجيل شكوى جديدة
-                    </h2>
+                    <h2 class="text-2xl font-bold mb-6" id="formTitle" style="color: var(--gold-dark);">➕ تسجيل شكوى جديدة</h2>
                     
-                    <h3 class="text-xl font-semibold mb-4" style="color: var(--gold-primary);">
-                        👨‍🎓 بيانات الطالب
-                    </h3>
+                    <h3 class="text-xl font-semibold mb-4" style="color: var(--gold-primary);">👨‍🎓 بيانات الطالب</h3>
                     <div class="grid md:grid-cols-2 gap-4 mb-6">
                         <div>
                             <label class="label">الاسم الكامل للطالب *</label>
@@ -566,27 +583,27 @@
                         </div>
                         <div>
                             <label class="label">الصف (Grade/Year) *</label>
-                            <select id="grade" class="input-field" onchange="checkInternationalYear()">
-                                <option value="">اختر الصف أولاً النظام</option>
+                            <select id="grade" class="input-field" onchange="updateSectionOptions()">
+                                <option value="">اختر النظام أولاً</option>
                             </select>
                         </div>
                         <div id="subCurriculumDiv" class="hidden">
                             <label class="label">المنهج الفرعي (للسنوات 10-12 دولي) *</label>
                             <select id="subCurriculum" class="input-field">
                                 <option value="">اختر المنهج</option>
-                                <option value="American">American </option>
+                                <option value="American">American</option>
                                 <option value="British">British</option>
                             </select>
                         </div>
                         <div>
-                            <label class="label">الفصل</label>
-                            <input type="text" id="section" class="input-field" placeholder="A, B, C...">
+                            <label class="label">الفصل *</label>
+                            <select id="section" class="input-field">
+                                <option value="">اختر الصف أولاً</option>
+                            </select>
                         </div>
                     </div>
 
-                    <h3 class="text-xl font-semibold mb-4" style="color: var(--gold-primary);">
-                        👨‍👩‍👧 بيانات ولي الأمر
-                    </h3>
+                    <h3 class="text-xl font-semibold mb-4" style="color: var(--gold-primary);">👨‍👩‍👧 بيانات ولي الأمر</h3>
                     <div class="grid md:grid-cols-2 gap-4 mb-6">
                         <div>
                             <label class="label">اسم ولي الأمر *</label>
@@ -611,9 +628,7 @@
                         </div>
                     </div>
 
-                    <h3 class="text-xl font-semibold mb-4" style="color: var(--gold-primary);">
-                        📝 تفاصيل الشكوى
-                    </h3>
+                    <h3 class="text-xl font-semibold mb-4" style="color: var(--gold-primary);">📝 تفاصيل الشكوى</h3>
                     <div class="grid md:grid-cols-2 gap-4 mb-6">
                         <div>
                             <label class="label">نوع المشكلة *</label>
@@ -624,6 +639,17 @@
                                 <option value="General">General - عام</option>
                                 <option value="Technology">Technology - تكنولوجيا</option>
                                 <option value="Other">Other - أخرى</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="label">القسم المعني *</label>
+                            <select id="department" class="input-field">
+                                <option value="Student Affairs">Student Affairs - شؤون الطلاب</option>
+                                <option value="IT">IT - تكنولوجيا المعلومات</option>
+                                <option value="Discipline">Discipline - الانضباط</option>
+                                <option value="Academic Dept">Academic Dept - القسم الأكاديمي</option>
+                                <option value="Health">Health - الصحة المدرسية</option>
+                                <option value="Administration">Administration - الإدارة</option>
                             </select>
                         </div>
                         <div>
@@ -656,6 +682,7 @@
                             </select>
                         </div>
                     </div>
+                    
                     <div class="mb-6">
                         <label class="label">وصف مفصل للمشكلة *</label>
                         <textarea id="description" class="input-field" rows="5" required></textarea>
@@ -761,7 +788,8 @@
             <!-- Reports Section -->
             <div id="reportsSection" class="hidden">
                 <div class="card">
-                    <h2 class="text-2xl font-bold mb-6" style="color: var(--gold-dark);">📈 التقارير</h2>
+                    <h2 class="text-2xl font-bold mb-6" style="color: var(--gold-dark);">📈 التقارير التفصيلية</h2>
+                    
                     <div class="grid md:grid-cols-3 gap-4 mb-6">
                         <div>
                             <label class="label">من تاريخ</label>
@@ -771,10 +799,11 @@
                             <label class="label">إلى تاريخ</label>
                             <input type="date" id="toDate" class="input-field">
                         </div>
-                        <div class="flex items-end">
-                            <button onclick="generateReport()" class="btn-primary w-full">📊 إنشاء تقرير</button>
+                        <div class="flex items-end gap-2">
+                            <button onclick="generateReport()" class="btn-primary flex-1">📊 إنشاء تقرير</button>
                         </div>
                     </div>
+                    
                     <div id="reportOutput"></div>
                 </div>
             </div>
@@ -802,6 +831,22 @@
             employee: { username: 'employee', password: 'emp123', role: 'employee', roleName: 'الموظف' },
             reviewer: { username: 'reviewer', password: 'rev123', role: 'reviewer', roleName: 'المتابع' },
             admin: { username: 'admin', password: 'admin123', role: 'admin', roleName: 'المدير' }
+        };
+
+        const classesByGrade = {
+            'KG1': ['Boo', 'Dolphin', 'Lions', 'Nemo', 'Simba', 'Snow white', 'Winnie'],
+            'KG2': ['Belle', 'Dora', 'Mermaid', 'Mickey', 'Moana', 'Tweety', 'Elsa', 'Ben10'],
+            'Grade 1': ['1A', '1B', '1C', '1D', '1E', '1F', '1G'],
+            'Grade 2': ['2A', '2B', '2C', '2D', '2E', '2F', '2G'],
+            'Grade 3': ['3A', '3B', '3C', '3D', '3E', '3F'],
+            'Grade 4': ['4A', '4B', '4C', '4D'],
+            'Grade 5': ['5A', '5B', '5C'],
+            'Grade 6': ['6A', '6B', '6C'],
+            'Grade 7': ['7A', '7B'],
+            'Grade 8': ['8A', '8B'],
+            'Grade 9': ['9A'],
+            'Grade 10': ['10A'],
+            'Grade 11': ['11A']
         };
 
         function loadData() {
@@ -870,24 +915,37 @@
         function showLoginSection() {
             document.getElementById('loginSection').classList.remove('hidden');
             document.getElementById('mainSection').classList.add('hidden');
+            document.getElementById('userManagementSection').classList.add('hidden');
+            document.getElementById('settingsSection').classList.add('hidden');
         }
 
         function showMainSection() {
             document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('mainSection').classList.remove('hidden');
+            document.getElementById('userManagementSection').classList.add('hidden');
+            document.getElementById('settingsSection').classList.add('hidden');
             
             document.getElementById('userRoleDisplay').textContent = `${currentUser.roleName} - ${currentUser.username}`;
             document.getElementById('logoutBtn').style.display = 'block';
-            document.getElementById('changePassBtn').style.display = 'block';
             
             if (currentUser.role === 'admin') {
+                document.getElementById('changePassBtn').style.display = 'block';
+                document.getElementById('userMgmtBtn').style.display = 'block';
                 document.getElementById('settingsBtn').style.display = 'block';
+            } else {
+                document.getElementById('changePassBtn').style.display = 'none';
+                document.getElementById('userMgmtBtn').style.display = 'none';
+                document.getElementById('settingsBtn').style.display = 'none';
             }
 
             showTab('new');
         }
 
         function showChangePassword() {
+            if (currentUser.role !== 'admin') {
+                showNotification('❌ فقط المدير يمكنه تغيير كلمات المرور', 'error');
+                return;
+            }
             document.getElementById('changePasswordModal').classList.remove('hidden');
             document.getElementById('currentPassword').value = '';
             document.getElementById('newPassword').value = '';
@@ -929,6 +987,114 @@
             showNotification('✅ تم تغيير كلمة المرور بنجاح', 'success');
         }
 
+        function showUserManagement() {
+            if (currentUser.role !== 'admin') {
+                showNotification('❌ ليس لديك صلاحية للوصول', 'error');
+                return;
+            }
+            document.getElementById('userManagementSection').classList.remove('hidden');
+            document.getElementById('mainSection').classList.add('hidden');
+            renderUsersTable();
+        }
+
+        function hideUserManagement() {
+            document.getElementById('userManagementSection').classList.add('hidden');
+            document.getElementById('mainSection').classList.remove('hidden');
+        }
+
+        function renderUsersTable() {
+            let html = '';
+            Object.keys(users).forEach(key => {
+                const user = users[key];
+                html += `<tr>
+                    <td class="font-bold">${user.username}</td>
+                    <td>${user.roleName}</td>
+                    <td>
+                        <div style="display: flex; gap: 8px; justify-content: center;">
+                            <button onclick="editUser('${key}')" class="btn-edit">✏️ تعديل</button>
+                            <button onclick="deleteUser('${key}')" class="btn-delete">🗑️ حذف</button>
+                        </div>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById('usersTableBody').innerHTML = html;
+        }
+
+        function addNewUser() {
+            const username = document.getElementById('newUserUsername').value;
+            const password = document.getElementById('newUserPassword').value;
+            const role = document.getElementById('newUserRole').value;
+
+            if (!username || !password) {
+                showNotification('⚠️ يرجى ملء جميع الحقول', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showNotification('⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+                return;
+            }
+
+            const userKey = username.toLowerCase().replace(/\s/g, '_');
+            
+            if (users[userKey]) {
+                showNotification('❌ اسم المستخدم موجود بالفعل', 'error');
+                return;
+            }
+
+            const roleNames = { employee: 'الموظف', reviewer: 'المتابع', admin: 'المدير' };
+
+            users[userKey] = {
+                username: username,
+                password: password,
+                role: role,
+                roleName: roleNames[role]
+            };
+
+            saveUsers();
+            document.getElementById('newUserUsername').value = '';
+            document.getElementById('newUserPassword').value = '';
+            renderUsersTable();
+            showNotification('✅ تم إضافة المستخدم بنجاح', 'success');
+        }
+
+        function editUser(key) {
+            const user = users[key];
+            const newUsername = prompt('أدخل اسم المستخدم الجديد:', user.username);
+            if (newUsername && newUsername !== user.username) {
+                user.username = newUsername;
+                saveUsers();
+                renderUsersTable();
+                showNotification('✅ تم تحديث اسم المستخدم', 'success');
+            }
+
+            const changePass = confirm('هل تريد تغيير كلمة المرور؟');
+            if (changePass) {
+                const newPassword = prompt('أدخل كلمة المرور الجديدة:');
+                if (newPassword && newPassword.length >= 6) {
+                    user.password = newPassword;
+                    saveUsers();
+                    showNotification('✅ تم تحديث كلمة المرور', 'success');
+                } else if (newPassword) {
+                    showNotification('⚠️ كلمة المرور قصيرة جداً', 'error');
+                }
+            }
+        }
+
+        function deleteUser(key) {
+            if (key === currentUser.role && users[key].username === currentUser.username) {
+                showNotification('❌ لا يمكنك حذف حسابك الحالي', 'error');
+                return;
+            }
+
+            if (confirm(`هل تريد حذف المستخدم ${users[key].username}؟`)) {
+                delete users[key];
+                saveUsers();
+                renderUsersTable();
+                showNotification('✅ تم حذف المستخدم', 'success');
+            }
+        }
+
         function toggleDarkMode() {
             isDark = !isDark;
             document.body.classList.toggle('dark', isDark);
@@ -942,63 +1108,13 @@
             document.getElementById('settingsSection').classList.remove('hidden');
             document.getElementById('mainSection').classList.add('hidden');
             document.getElementById('storageMethod').value = config.storageMethod;
-            updateStorageConfig();
-        }
-
-        function updateStorageConfig() {
-            const method = document.getElementById('storageMethod').value;
-            document.getElementById('powerAutomateConfig').classList.add('hidden');
-            document.getElementById('apiConfig').classList.add('hidden');
-            document.getElementById('graphApiConfig').classList.add('hidden');
-
-            if (method === 'powerautomate') {
-                document.getElementById('powerAutomateConfig').classList.remove('hidden');
-                document.getElementById('flowUrl').value = config.flowUrl;
-            } else if (method === 'api') {
-                document.getElementById('apiConfig').classList.remove('hidden');
-                document.getElementById('apiUrl').value = config.apiUrl;
-            } else if (method === 'graphapi') {
-                document.getElementById('graphApiConfig').classList.remove('hidden');
-                document.getElementById('tenantId').value = config.tenantId;
-                document.getElementById('clientId').value = config.clientId;
-                document.getElementById('clientSecret').value = config.clientSecret;
-                document.getElementById('driveId').value = config.driveId;
-                document.getElementById('fileId').value = config.fileId;
-            }
         }
 
         function saveSettings() {
             config.storageMethod = document.getElementById('storageMethod').value;
-            
-            if (config.storageMethod === 'powerautomate') {
-                config.flowUrl = document.getElementById('flowUrl').value;
-            } else if (config.storageMethod === 'api') {
-                config.apiUrl = document.getElementById('apiUrl').value;
-            } else if (config.storageMethod === 'graphapi') {
-                config.tenantId = document.getElementById('tenantId').value;
-                config.clientId = document.getElementById('clientId').value;
-                config.clientSecret = document.getElementById('clientSecret').value;
-                config.driveId = document.getElementById('driveId').value;
-                config.fileId = document.getElementById('fileId').value;
-            }
-
             localStorage.setItem('systemConfig', JSON.stringify(config));
             showNotification('✅ تم حفظ الإعدادات بنجاح', 'success');
             hideSettings();
-        }
-
-        async function testApiConnection() {
-            const apiUrl = document.getElementById('apiUrl').value;
-            try {
-                const response = await fetch(`${apiUrl}/api/complaints`);
-                if (response.ok) {
-                    showNotification('✅ الاتصال ناجح!', 'success');
-                } else {
-                    showNotification('❌ فشل الاتصال', 'error');
-                }
-            } catch (error) {
-                showNotification('❌ خطأ في الاتصال: ' + error.message, 'error');
-            }
         }
 
         function hideSettings() {
@@ -1040,16 +1156,16 @@
 
         function clearForm() {
             document.getElementById('studentName').value = '';
-            document.getElementById('studentId').value = '';
             document.getElementById('curriculum').selectedIndex = 0;
-            document.getElementById('grade').innerHTML = '<option value="">اختر الصف أولاً النظام</option>';
-            document.getElementById('section').value = '';
+            document.getElementById('grade').innerHTML = '<option value="">اختر النظام أولاً</option>';
+            document.getElementById('section').innerHTML = '<option value="">اختر الصف أولاً</option>';
             document.getElementById('guardianName').value = '';
             document.getElementById('relation').selectedIndex = 0;
             document.getElementById('phone').value = '';
             document.getElementById('email').value = '';
             document.getElementById('complaintType').selectedIndex = 0;
-            document.getElementById('priority').selectedIndex = 2; // Default: متوسط
+            document.getElementById('department').selectedIndex = 0;
+            document.getElementById('priority').selectedIndex = 2;
             document.getElementById('assignedTo').selectedIndex = 0;
             document.getElementById('status').selectedIndex = 0;
             document.getElementById('description').value = '';
@@ -1064,75 +1180,84 @@
             document.getElementById('cancelBtn').style.display = 'none';
         }
 
-        // Update grade options based on curriculum
         function updateGradeOptions() {
             const curriculum = document.getElementById('curriculum').value;
             const gradeSelect = document.getElementById('grade');
             
             gradeSelect.innerHTML = '<option value="">اختر الصف</option>';
+            document.getElementById('section').innerHTML = '<option value="">اختر الصف أولاً</option>';
             
-            if (curriculum === 'National') {
-                const nationalGrades = [
-                    'KG1', 'KG2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 
-                    'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'
-                ];
-                nationalGrades.forEach(grade => {
+            if (curriculum === 'National' || curriculum === 'Online') {
+                const grades = ['KG1', 'KG2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 
+                    'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+                grades.forEach(grade => {
                     gradeSelect.innerHTML += `<option value="${grade}">${grade}</option>`;
                 });
             } else if (curriculum === 'International') {
-                const internationalYears = [
-                    'FS1', 'FS2', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6',
-                    'Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'
-                ];
-                internationalYears.forEach(year => {
+                const years = ['FS1', 'FS2', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5', 'Year 6',
+                    'Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'];
+                years.forEach(year => {
                     gradeSelect.innerHTML += `<option value="${year}">${year}</option>`;
-                });
-            } else if (curriculum === 'Online') {
-                const onlineGrades = [
-                    'KG1', 'KG2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 
-                    'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'
-                ];
-                onlineGrades.forEach(grade => {
-                    gradeSelect.innerHTML += `<option value="${grade}">${grade}</option>`;
                 });
             }
             
             document.getElementById('subCurriculumDiv').classList.add('hidden');
         }
 
-        // Check if International Year 10-12 to show sub-curriculum
-        function checkInternationalYear() {
-            const curriculum = document.getElementById('curriculum').value;
+        function updateSectionOptions() {
             const grade = document.getElementById('grade').value;
-            const subCurriculumDiv = document.getElementById('subCurriculumDiv');
+            const curriculum = document.getElementById('curriculum').value;
+            const sectionSelect = document.getElementById('section');
+            
+            sectionSelect.innerHTML = '<option value="">اختر الفصل</option>';
+            
+            if (grade && classesByGrade[grade]) {
+                classesByGrade[grade].forEach(section => {
+                    sectionSelect.innerHTML += `<option value="${section}">${section}</option>`;
+                });
+            }
             
             if (curriculum === 'International' && (grade === 'Year 10' || grade === 'Year 11' || grade === 'Year 12')) {
-                subCurriculumDiv.classList.remove('hidden');
+                document.getElementById('subCurriculumDiv').classList.remove('hidden');
             } else {
-                subCurriculumDiv.classList.add('hidden');
+                document.getElementById('subCurriculumDiv').classList.add('hidden');
                 document.getElementById('subCurriculum').selectedIndex = 0;
             }
         }
 
         function editComplaint(id) {
             const complaint = complaints.find(c => c.id === id);
-            if (!complaint) return;
+            if (!complaint) {
+                showNotification('❌ لم يتم العثور على الشكوى', 'error');
+                return;
+            }
 
             document.getElementById('studentName').value = complaint.studentName;
-            document.getElementById('studentId').value = complaint.studentId;
+            
             document.getElementById('curriculum').value = complaint.curriculum;
             updateGradeOptions();
-            document.getElementById('grade').value = complaint.grade;
-            checkInternationalYear();
-            if (complaint.subCurriculum) {
-                document.getElementById('subCurriculum').value = complaint.subCurriculum;
-            }
-            document.getElementById('section').value = complaint.section || '';
+            
+            setTimeout(() => {
+                document.getElementById('grade').value = complaint.grade;
+                updateSectionOptions();
+                
+                setTimeout(() => {
+                    document.getElementById('section').value = complaint.section || '';
+                    
+                    if (complaint.subCurriculum) {
+                        document.getElementById('subCurriculumDiv').classList.remove('hidden');
+                        document.getElementById('subCurriculum').value = complaint.subCurriculum;
+                    }
+                }, 100);
+            }, 100);
+
             document.getElementById('guardianName').value = complaint.guardianName;
             document.getElementById('relation').value = complaint.relation;
             document.getElementById('phone').value = complaint.phone;
             document.getElementById('email').value = complaint.email || '';
+            
             document.getElementById('complaintType').value = complaint.type;
+            document.getElementById('department').value = complaint.department;
             document.getElementById('priority').value = complaint.priority || 'متوسط';
             document.getElementById('assignedTo').value = complaint.assignedTo || '';
             document.getElementById('status').value = complaint.status;
@@ -1162,45 +1287,38 @@
         function submitComplaint() {
             const complaintData = {
                 studentName: document.getElementById('studentName').value,
-                studentId: document.getElementById('studentId').value,
                 curriculum: document.getElementById('curriculum').value,
                 grade: document.getElementById('grade').value,
                 section: document.getElementById('section').value,
+                subCurriculum: document.getElementById('subCurriculum').value,
                 guardianName: document.getElementById('guardianName').value,
                 relation: document.getElementById('relation').value,
                 phone: document.getElementById('phone').value,
                 email: document.getElementById('email').value,
                 type: document.getElementById('complaintType').value,
                 department: document.getElementById('department').value,
+                priority: document.getElementById('priority').value,
+                assignedTo: document.getElementById('assignedTo').value,
                 status: document.getElementById('status').value,
                 description: document.getElementById('description').value,
                 adminNotes: document.getElementById('adminNotes').value
             };
 
-            if (!complaintData.studentName || !complaintData.studentId || !complaintData.guardianName || 
-                !complaintData.phone || !complaintData.description || !complaintData.grade) {
-                showNotification('⚠️ يرجى ملء جميع الحقول المطلوبة', 'error');
-                return;
-            }
-
             if (isEditMode && editingComplaintId) {
-                // تعديل شكوى موجودة
                 const index = complaints.findIndex(c => c.id === editingComplaintId);
                 if (index !== -1) {
-                    // نحتفظ بالبيانات القديمة المهمة
                     const oldComplaint = complaints[index];
                     
-                    // نحدث البيانات الجديدة فقط
                     complaints[index] = {
-                        ...oldComplaint,  // نحتفظ بكل البيانات القديمة
-                        ...complaintData, // نحدث بالبيانات الجديدة
-                        id: oldComplaint.id, // نتأكد إن الـ ID ما يتغيرش
-                        createdBy: oldComplaint.createdBy, // نحتفظ بمن أنشأ الشكوى
+                        ...oldComplaint,
+                        ...complaintData,
+                        id: oldComplaint.id,
+                        createdBy: oldComplaint.createdBy,
                         createdByRole: oldComplaint.createdByRole,
-                        createdAt: oldComplaint.createdAt, // نحتفظ بتاريخ الإنشاء
-                        updatedAt: new Date().toISOString(), // نحدث وقت التعديل فقط
+                        createdAt: oldComplaint.createdAt,
+                        updatedAt: new Date().toISOString(),
                         activityLog: [
-                            ...oldComplaint.activityLog, // نحتفظ بسجل النشاط القديم
+                            ...(oldComplaint.activityLog || []),
                             {
                                 action: 'Updated',
                                 user: currentUser.username,
@@ -1219,7 +1337,6 @@
                     showNotification('❌ لم يتم العثور على الشكوى', 'error');
                 }
             } else {
-                // إنشاء شكوى جديدة
                 const complaint = {
                     id: `2025-${String(complaints.length + 1).padStart(4, '0')}`,
                     ...complaintData,
@@ -1246,7 +1363,6 @@
         function renderComplaints() {
             let filtered = filterComplaintsData();
             
-            // ترتيب حسب الأولوية (العاجل أولاً)
             const priorityOrder = { 'عاجل': 1, 'مرتفع': 2, 'متوسط': 3, 'منخفض': 4 };
             filtered.sort((a, b) => {
                 const priorityA = priorityOrder[a.priority || 'متوسط'];
@@ -1255,11 +1371,11 @@
             });
 
             let html = '<div class="overflow-x-auto"><table><thead><tr>';
-            html += '<th>رقم الشكوى</th><th>الأولوية</th><th>اسم الطالب</th><th>النظام</th><th>النوع</th><th>الحالة</th><th>المسؤول</th><th>التاريخ</th><th style="min-width: 250px;">الإجراءات</th>';
+            html += '<th>رقم الشكوى</th><th>الأولوية</th><th>اسم الطالب</th><th>النظام</th><th>الصف</th><th>الفصل</th><th>النوع</th><th>الحالة</th><th>المسؤول</th><th>التاريخ</th><th style="min-width: 250px;">الإجراءات</th>';
             html += '</tr></thead><tbody>';
 
             if (filtered.length === 0) {
-                html += '<tr><td colspan="9" class="text-center p-8" style="color: var(--gold-dark);">📋 لا توجد شكاوى</td></tr>';
+                html += '<tr><td colspan="11" class="text-center p-8" style="color: var(--gold-dark);">📋 لا توجد شكاوى</td></tr>';
             }
 
             filtered.forEach(c => {
@@ -1272,6 +1388,8 @@
                 html += `<td><span style="font-size: 20px;">${priorityIcon[c.priority || 'متوسط']} ${c.priority || 'متوسط'}</span></td>`;
                 html += `<td><strong>${c.studentName}</strong></td>`;
                 html += `<td>${curriculumDisplay}</td>`;
+                html += `<td>${c.grade}</td>`;
+                html += `<td><strong>${c.section || '-'}</strong></td>`;
                 html += `<td>${c.type}</td>`;
                 html += `<td><span class="status-badge ${statusClass}">${c.status}</span></td>`;
                 html += `<td>${c.assignedTo || 'غير معين'}</td>`;
@@ -1318,21 +1436,71 @@
             const c = complaints.find(x => x.id === id);
             if (!c) return;
 
+            const priorityIcon = { 'عاجل': '🔴', 'مرتفع': '🟠', 'متوسط': '🟡', 'منخفض': '🟢' };
+            const statusClass = `status-${c.status.toLowerCase().replace(' ', '')}`;
+
             let html = `<div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" onclick="this.remove()">
                 <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onclick="event.stopPropagation()" style="border: 3px solid var(--gold-primary);">
                     <div class="flex justify-between items-start mb-6">
-                        <h2 class="text-3xl font-bold" style="color: var(--gold-dark);">📋 ${c.id}</h2>
+                        <h2 class="text-3xl font-bold" style="color: var(--gold-dark);">📋 تفاصيل الشكوى ${c.id}</h2>
                         <button onclick="this.closest('.fixed').remove()" class="text-4xl hover:text-red-600" style="color: var(--gold-primary);">&times;</button>
                     </div>
-                    <div class="mb-4"><h3 class="text-xl font-bold mb-3" style="color: var(--gold-primary);">👨‍🎓 بيانات الطالب</h3>
-                    <div class="mb-4"><h3 class="text-xl font-bold mb-3" style="color: var(--gold-primary);">👨‍👩‍👧 ولي الأمر</h3>
-                    <div class="grid md:grid-cols-2 gap-3">
-                        <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>الاسم:</strong> ${c.guardianName}</div>
-                        <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>الهاتف:</strong> ${c.phone}</div>
-                    </div></div>
-                    <div class="mb-4"><p class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>الوصف:</strong> ${c.description}</p></div>
+                    
+                    <div class="grid md:grid-cols-2 gap-4 mb-6">
+                        <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <strong>الأولوية:</strong> ${priorityIcon[c.priority || 'متوسط']} ${c.priority || 'متوسط'}
+                        </div>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <strong>الحالة:</strong> <span class="status-badge ${statusClass}">${c.status}</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h3 class="text-xl font-bold mb-3" style="color: var(--gold-primary);">👨‍🎓 بيانات الطالب</h3>
+                        <div class="grid md:grid-cols-2 gap-3">
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>الاسم:</strong> ${c.studentName}</div>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>النظام:</strong> ${c.curriculum}${c.subCurriculum ? ` (${c.subCurriculum})` : ''}</div>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>الصف:</strong> ${c.grade}</div>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>الفصل:</strong> ${c.section || '-'}</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h3 class="text-xl font-bold mb-3" style="color: var(--gold-primary);">👨‍👩‍👧 بيانات ولي الأمر</h3>
+                        <div class="grid md:grid-cols-2 gap-3">
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>الاسم:</strong> ${c.guardianName}</div>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>صلة القرابة:</strong> ${c.relation}</div>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>الهاتف:</strong> ${c.phone}</div>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>البريد:</strong> ${c.email || 'غير متوفر'}</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h3 class="text-xl font-bold mb-3" style="color: var(--gold-primary);">📝 تفاصيل الشكوى</h3>
+                        <div class="grid md:grid-cols-2 gap-3 mb-3">
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>النوع:</strong> ${c.type}</div>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>القسم:</strong> ${c.department}</div>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>المسؤول:</strong> ${c.assignedTo || 'غير معين'}</div>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>التاريخ:</strong> ${new Date(c.createdAt).toLocaleDateString('ar-EG')}</div>
+                        </div>
+                        <div class="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg mb-3">
+                            <strong>الوصف:</strong><br>${c.description}
+                        </div>
+                        ${c.adminNotes ? `<div class="p-4 bg-yellow-50 dark:bg-yellow-900 rounded-lg">
+                            <strong>ملاحظات الإدارة:</strong><br>${c.adminNotes}
+                        </div>` : ''}
+                    </div>
+
+                    <div class="mb-4">
+                        <h3 class="text-xl font-bold mb-3" style="color: var(--gold-primary);">📊 معلومات النظام</h3>
+                        <div class="grid md:grid-cols-2 gap-3">
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>أنشأها:</strong> ${c.createdByRole} (${c.createdBy})</div>
+                            <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"><strong>آخر تحديث:</strong> ${new Date(c.updatedAt).toLocaleString('ar-EG')}</div>
+                        </div>
+                    </div>
                 </div>
             </div>`;
+            
             document.body.insertAdjacentHTML('beforeend', html);
         }
 
@@ -1353,7 +1521,6 @@
             document.getElementById('pendingCount').textContent = complaints.filter(c => c.status === 'Pending').length;
             document.getElementById('resolvedCount').textContent = complaints.filter(c => c.status === 'Resolved').length;
             
-            // Clear old charts
             ['typeChart', 'statusChart', 'priorityChart', 'curriculumChart'].forEach(chartId => {
                 const canvas = document.getElementById(chartId);
                 if (canvas && canvas.chart) {
@@ -1361,7 +1528,6 @@
                 }
             });
 
-            // Type Chart
             const typeData = {};
             complaints.forEach(c => {
                 typeData[c.type] = (typeData[c.type] || 0) + 1;
@@ -1386,7 +1552,6 @@
                 }
             });
 
-            // Status Chart
             const statusData = {
                 'قيد الانتظار': complaints.filter(c => c.status === 'Pending').length,
                 'قيد المعالجة': complaints.filter(c => c.status === 'In Progress').length,
@@ -1411,7 +1576,6 @@
                 }
             });
 
-            // Priority Chart
             const priorityData = {
                 'عاجل 🔴': complaints.filter(c => (c.priority || 'متوسط') === 'عاجل').length,
                 'مرتفع 🟠': complaints.filter(c => (c.priority || 'متوسط') === 'مرتفع').length,
@@ -1436,7 +1600,6 @@
                 }
             });
 
-            // Curriculum Chart
             const curriculumData = {};
             complaints.forEach(c => {
                 const key = c.subCurriculum ? `${c.curriculum} (${c.subCurriculum})` : c.curriculum;
@@ -1478,7 +1641,10 @@
                     <div class="text-center mb-6">
                         <img src="logo.png" alt="Logo" style="height: 80px; width: auto; margin: 0 auto;">
                         <h3 class="text-3xl font-bold mt-4" style="color: var(--gold-dark);"></h3>
-                        <p class="text-gray-600 dark:text-gray-400 mt-2"></p>
+                        <p class="text-gray-600 dark:text-gray-400 mt-2">
+                            ${fromDate ? `من ${new Date(fromDate).toLocaleDateString('ar-EG')}` : ''} 
+                            ${toDate ? `إلى ${new Date(toDate).toLocaleDateString('ar-EG')}` : ''}
+                        </p>
                     </div>
                     
                     <div class="grid md:grid-cols-4 gap-4 mb-6">
@@ -1551,7 +1717,7 @@
                         <p class="text-sm text-gray-500 mb-4">تم إنشاؤه بواسطة: ${currentUser.username} (${currentUser.roleName})</p>
                         <div class="flex gap-4 justify-center print-hide">
                             <button onclick="printReport()" class="btn-primary">🖨️ طباعة التقرير</button>
-                            <button onclick="exportReportPDF()" class="btn-secondary">📄 تصدير PDF</button>
+                            <button onclick="exportReportExcel()" class="btn-primary">📥 تصدير Excel</button>
                         </div>
                     </div>
                 </div>
@@ -1564,24 +1730,101 @@
             window.print();
         }
 
-        function exportReportPDF() {
-            showNotification('💡 للتصدير كـ PDF: استخدم خيار الطباعة واختر "حفظ كـ PDF"', 'info');
-            setTimeout(() => {
-                window.print();
-            }, 1000);
+        function exportReportExcel() {
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+
+            let filtered = complaints;
+            if (fromDate) {
+                filtered = filtered.filter(c => new Date(c.createdAt) >= new Date(fromDate));
+            }
+            if (toDate) {
+                filtered = filtered.filter(c => new Date(c.createdAt) <= new Date(toDate));
+            }
+
+            const data = filtered.map(c => ({
+                'رقم الشكوى': c.id,
+                'اسم الطالب': c.studentName,
+                'النظام': c.curriculum + (c.subCurriculum ? ` (${c.subCurriculum})` : ''),
+                'الصف': c.grade,
+                'الفصل': c.section || '-',
+                'ولي الأمر': c.guardianName,
+                'الهاتف': c.phone,
+                'البريد': c.email || '-',
+                'نوع المشكلة': c.type,
+                'القسم': c.department,
+                'الأولوية': c.priority || 'متوسط',
+                'الحالة': c.status,
+                'المسؤول': c.assignedTo || 'غير معين',
+                'الوصف': c.description,
+                'ملاحظات الإدارة': c.adminNotes || '-',
+                'أنشأها': c.createdByRole,
+                'تاريخ الإنشاء': new Date(c.createdAt).toLocaleDateString('ar-EG'),
+                'آخر تحديث': new Date(c.updatedAt).toLocaleDateString('ar-EG')
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "تقرير الشكاوى");
+            
+            const fileName = `تقرير_الشكاوى_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            showNotification('✅ تم تصدير التقرير بنجاح', 'success');
         }
 
         function exportToExcel() {
-            let csv = '\ufeffID,Student,Grade,Type,Status,Date\n';
-            complaints.forEach(c => {
-                csv += `"${c.id}","${c.studentName}","${c.grade}","${c.type}","${c.status}","${c.createdAt}"\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `Complaints_${new Date().toISOString().split('T')[0]}.csv`;
-            link.click();
-            showNotification('✅ تم التصدير', 'success');
+            const data = complaints.map(c => ({
+                'رقم الشكوى': c.id,
+                'اسم الطالب': c.studentName,
+                'النظام': c.curriculum + (c.subCurriculum ? ` (${c.subCurriculum})` : ''),
+                'الصف': c.grade,
+                'الفصل': c.section || '-',
+                'ولي الأمر': c.guardianName,
+                'الهاتف': c.phone,
+                'البريد': c.email || '-',
+                'نوع المشكلة': c.type,
+                'القسم': c.department,
+                'الأولوية': c.priority || 'متوسط',
+                'الحالة': c.status,
+                'المسؤول': c.assignedTo || 'غير معين',
+                'الوصف': c.description,
+                'ملاحظات الإدارة': c.adminNotes || '-',
+                'أنشأها': c.createdByRole,
+                'تاريخ الإنشاء': new Date(c.createdAt).toLocaleDateString('ar-EG'),
+                'آخر تحديث': new Date(c.updatedAt).toLocaleDateString('ar-EG')
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            
+            const colWidths = [
+                { wch: 15 }, // رقم الشكوى
+                { wch: 20 }, // اسم الطالب
+                { wch: 15 }, // رقم الطالب
+                { wch: 20 }, // النظام
+                { wch: 12 }, // الصف
+                { wch: 12 }, // الفصل
+                { wch: 20 }, // ولي الأمر
+                { wch: 15 }, // الهاتف
+                { wch: 25 }, // البريد
+                { wch: 15 }, // نوع المشكلة
+                { wch: 15 }, // القسم
+                { wch: 12 }, // الأولوية
+                { wch: 15 }, // الحالة
+                { wch: 20 }, // المسؤول
+                { wch: 40 }, // الوصف
+                { wch: 30 }, // ملاحظات الإدارة
+                { wch: 15 }, // أنشأها
+                { wch: 15 }, // تاريخ الإنشاء
+                { wch: 15 }  // آخر تحديث
+            ];
+            ws['!cols'] = colWidths;
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "الشكاوى");
+            
+            const fileName = `جميع_الشكاوى_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            showNotification('✅ تم التصدير بنجاح', 'success');
         }
 
         function showNotification(message, type = 'success') {
