@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>compalint</title>
+    <title>نظام إدارة شكاوى الطلاب</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -522,22 +522,105 @@
                     <svg class="w-8 h-8" fill="var(--gold-primary)" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
                     </svg>
-                    <h2 class="text-2xl font-bold" style="color: var(--gold-dark);">⚙️ إعدادات النظام</h2>
+                    <h2 class="text-2xl font-bold" style="color: var(--gold-dark);">⚙️ إعدادات النظام (المدير فقط)</h2>
                 </div>
                 
                 <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px dashed var(--gold-primary); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
                     <h3 class="text-xl font-bold mb-4" style="color: var(--gold-dark);">🔗 اختر طريقة التخزين:</h3>
                     <select id="storageMethod" class="input-field mb-4" onchange="updateStorageConfig()">
-                        <option value="local">Local Storage</option>
-                        <option value="powerautomate">Power Automate</option>
-                        <option value="api">Python Api</option>
-                        <option value="graphapi">Microsoft Graph API</option>
+                        <option value="local">💾 Local Storage (التخزين المحلي)</option>
+                        <option value="powerautomate">⚡ Power Automate</option>
+                        <option value="api">🔌 Python API</option>
+                        <option value="graphapi">☁️ Microsoft Graph API</option>
                     </select>
+                    <p class="text-sm mt-2" style="color: #92400e;">
+                        <strong>ملاحظة:</strong> التخزين المحلي يعمل على المتصفح فقط. للمشاركة بين عدة أجهزة، استخدم Power Automate أو API.
+                    </p>
+                </div>
+
+                <!-- Power Automate Config -->
+                <div id="powerAutomateConfig" class="hidden mb-6">
+                    <div class="card" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);">
+                        <h4 class="font-bold mb-3 text-xl" style="color: #1e40af;">⚡ إعداد Power Automate</h4>
+                        <div class="mb-4">
+                            <label class="label">رابط Flow URL:</label>
+                            <input type="url" id="flowUrl" class="input-field" placeholder="https://prod-xx.westus.logic.azure.com:443/workflows/...">
+                        </div>
+                        <div class="p-4 bg-white rounded-lg">
+                            <p class="text-sm font-bold mb-2">📝 خطوات الحصول على الرابط:</p>
+                            <ol class="text-sm list-decimal mr-5 space-y-1">
+                                <li>افتح Power Automate → انشئ Flow جديد</li>
+                                <li>اختر Trigger: "When a HTTP request is received"</li>
+                                <li>أضف Action: "Excel Online" → "Add a row into a table"</li>
+                                <li>احفظ الـ Flow وانسخ HTTP POST URL</li>
+                                <li>الصق الرابط في الخانة أعلاه</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Config -->
+                <div id="apiConfig" class="hidden mb-6">
+                    <div class="card" style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);">
+                        <h4 class="font-bold mb-3 text-xl" style="color: #065f46;">🔌 إعداد Python API</h4>
+                        <div class="mb-4">
+                            <label class="label">عنوان السيرفر:</label>
+                            <input type="url" id="apiUrl" class="input-field" placeholder="http://192.168.1.100:5000" value="http://localhost:5000">
+                        </div>
+                        <div class="p-4 bg-white rounded-lg mb-3">
+                            <p class="text-sm font-bold mb-2">📝 ملاحظات:</p>
+                            <ul class="text-sm list-disc mr-5 space-y-1">
+                                <li>تأكد من تشغيل السيرفر أولاً</li>
+                                <li>استبدل localhost بـ IP السيرفر للوصول من أجهزة أخرى</li>
+                                <li>مثال: http://192.168.1.100:5000</li>
+                            </ul>
+                        </div>
+                        <button onclick="testApiConnection()" class="btn-primary">🔍 اختبار الاتصال</button>
+                    </div>
+                </div>
+
+                <!-- Graph API Config -->
+                <div id="graphApiConfig" class="hidden mb-6">
+                    <div class="card" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
+                        <h4 class="font-bold mb-3 text-xl" style="color: #92400e;">☁️ إعداد Microsoft Graph API</h4>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="label">Tenant ID:</label>
+                                <input type="text" id="tenantId" class="input-field" placeholder="xxxxxxxx-xxxx-xxxx-xxxx">
+                            </div>
+                            <div>
+                                <label class="label">Client ID:</label>
+                                <input type="text" id="clientId" class="input-field" placeholder="xxxxxxxx-xxxx-xxxx-xxxx">
+                            </div>
+                            <div>
+                                <label class="label">Client Secret:</label>
+                                <input type="password" id="clientSecret" class="input-field">
+                            </div>
+                            <div>
+                                <label class="label">Drive ID:</label>
+                                <input type="text" id="driveId" class="input-field">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="label">File ID (Excel File):</label>
+                                <input type="text" id="fileId" class="input-field">
+                            </div>
+                        </div>
+                        <div class="p-4 bg-white rounded-lg mt-4">
+                            <p class="text-sm font-bold mb-2">📝 خطوات الإعداد:</p>
+                            <ol class="text-sm list-decimal mr-5 space-y-1">
+                                <li>سجل تطبيق في Azure AD Portal</li>
+                                <li>احصل على Tenant ID و Client ID</li>
+                                <li>أنشئ Client Secret</li>
+                                <li>امنح التطبيق صلاحيات Files.ReadWrite.All</li>
+                                <li>احصل على Drive ID و File ID من OneDrive/SharePoint</li>
+                            </ol>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="flex gap-4">
                     <button onclick="saveSettings()" class="btn-primary flex-1">💾 حفظ الإعدادات</button>
-                    <button onclick="hideSettings()" class="btn-secondary flex-1">إلغاء</button>
+                    <button onclick="hideSettings()" class="btn-secondary flex-1">❌ إلغاء</button>
                 </div>
             </div>
         </div>
@@ -558,7 +641,7 @@
             <div id="complaintFormSection" class="hidden">
                 <div class="card">
                     <div id="editModeBanner" class="hidden edit-mode-banner">
-                        <h3 class="text-2xl font-bold" style="color: var(--gold-dark);"> وضع التعديل</h3>
+                        <h3 class="text-2xl font-bold" style="color: var(--gold-dark);">✏️ وضع التعديل</h3>
                         <p class="text-lg mt-2" style="color: #92400e;">
                             جاري تعديل الشكوى رقم: <strong id="editingComplaintId"></strong>
                         </p>
@@ -711,7 +794,7 @@
                     </div>
                     
                     <div class="grid md:grid-cols-4 gap-4 mb-6">
-                        <input type="text" id="searchFilter" placeholder="🔍 بحث..." class="input-field" oninput="filterComplaints()">
+                        <input type="text" id="searchFilter" placeholder="🔍 بحث في جميع الحقول..." class="input-field" oninput="filterComplaints()">
                         <select id="statusFilter" class="input-field" onchange="filterComplaints()">
                             <option value="">جميع الحالات</option>
                             <option value="Pending">قيد الانتظار</option>
@@ -828,8 +911,8 @@
         };
 
         let users = {
-            employee: { username: 'user', password: '123456', role: 'employee', roleName: 'الموظف' },
-            reviewer: { username: 'user', password: '123456', role: 'reviewer', roleName: 'المتابع' },
+            employee: { username: 'employee', password: 'emp123', role: 'employee', roleName: 'الموظف' },
+            reviewer: { username: 'reviewer', password: 'rev123', role: 'reviewer', roleName: 'المتابع' },
             admin: { username: 'admin', password: 'admin123', role: 'admin', roleName: 'المدير' }
         };
 
@@ -849,20 +932,359 @@
             'Grade 11': ['11A']
         };
 
-        function loadData() {
-            const saved = localStorage.getItem('complaints');
-            if (saved) complaints = JSON.parse(saved);
-            
-            const savedUsers = localStorage.getItem('systemUsers');
-            if (savedUsers) users = JSON.parse(savedUsers);
-            
-            const savedConfig = localStorage.getItem('systemConfig');
-            if (savedConfig) config = { ...config, ...JSON.parse(savedConfig) };
+        // ========== وظائف التخزين الموحدة ==========
+        
+        async function loadData() {
+            try {
+                const savedConfig = localStorage.getItem('systemConfig');
+                if (savedConfig) {
+                    config = { ...config, ...JSON.parse(savedConfig) };
+                }
+
+                if (config.storageMethod === 'local') {
+                    const saved = localStorage.getItem('complaints');
+                    if (saved) complaints = JSON.parse(saved);
+                } else if (config.storageMethod === 'powerautomate') {
+                    await loadFromPowerAutomate();
+                } else if (config.storageMethod === 'api') {
+                    await loadFromAPI();
+                } else if (config.storageMethod === 'graphapi') {
+                    await loadFromGraphAPI();
+                }
+                
+                const savedUsers = localStorage.getItem('systemUsers');
+                if (savedUsers) users = JSON.parse(savedUsers);
+                
+            } catch (error) {
+                console.error('خطأ في تحميل البيانات:', error);
+                showNotification('⚠️ خطأ في تحميل البيانات: ' + error.message, 'error');
+            }
         }
 
-        function saveData() {
-            localStorage.setItem('complaints', JSON.stringify(complaints));
+        async function saveData() {
+            try {
+                if (config.storageMethod === 'local') {
+                    localStorage.setItem('complaints', JSON.stringify(complaints));
+                } else if (config.storageMethod === 'powerautomate') {
+                    await saveToPowerAutomate();
+                } else if (config.storageMethod === 'api') {
+                    await saveToAPI();
+                } else if (config.storageMethod === 'graphapi') {
+                    await saveToGraphAPI();
+                }
+            } catch (error) {
+                console.error('خطأ في حفظ البيانات:', error);
+                showNotification('❌ خطأ في حفظ البيانات: ' + error.message, 'error');
+            }
         }
+
+        // ========== Power Automate ==========
+        
+        async function loadFromPowerAutomate() {
+            if (!config.flowUrl) {
+                showNotification('⚠️ لم يتم تكوين رابط Power Automate', 'error');
+                return;
+            }
+
+            try {
+                // Power Automate عادة للإرسال فقط، لذا نستخدم Local Storage للقراءة
+                const saved = localStorage.getItem('complaints');
+                if (saved) complaints = JSON.parse(saved);
+            } catch (error) {
+                console.error('خطأ في التحميل من Power Automate:', error);
+                throw error;
+            }
+        }
+
+        async function saveToPowerAutomate() {
+            if (!config.flowUrl) {
+                showNotification('⚠️ لم يتم تكوين رابط Power Automate', 'error');
+                return;
+            }
+
+            try {
+                // حفظ محلي أولاً
+                localStorage.setItem('complaints', JSON.stringify(complaints));
+
+                // إرسال آخر شكوى إلى Power Automate
+                const lastComplaint = complaints[complaints.length - 1];
+                if (lastComplaint) {
+                    const response = await fetch(config.flowUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(lastComplaint)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('فشل الإرسال إلى Power Automate');
+                    }
+
+                    showNotification('✅ تم الإرسال إلى Power Automate بنجاح', 'success');
+                }
+            } catch (error) {
+                console.error('خطأ في الحفظ إلى Power Automate:', error);
+                showNotification('❌ خطأ في الإرسال: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        // ========== Python API ==========
+        
+        async function loadFromAPI() {
+            if (!config.apiUrl) {
+                showNotification('⚠️ لم يتم تكوين عنوان API', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${config.apiUrl}/complaints`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('فشل الاتصال بالـ API');
+                }
+
+                const data = await response.json();
+                complaints = data.complaints || [];
+            } catch (error) {
+                console.error('خطأ في التحميل من API:', error);
+                // استخدام التخزين المحلي كبديل
+                const saved = localStorage.getItem('complaints');
+                if (saved) complaints = JSON.parse(saved);
+                throw error;
+            }
+        }
+
+        async function saveToAPI() {
+            if (!config.apiUrl) {
+                showNotification('⚠️ لم يتم تكوين عنوان API', 'error');
+                return;
+            }
+
+            try {
+                // حفظ محلي أولاً كنسخة احتياطية
+                localStorage.setItem('complaints', JSON.stringify(complaints));
+
+                const response = await fetch(`${config.apiUrl}/complaints`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ complaints })
+                });
+
+                if (!response.ok) {
+                    throw new Error('فشل الحفظ في API');
+                }
+
+                showNotification('✅ تم الحفظ في API بنجاح', 'success');
+            } catch (error) {
+                console.error('خطأ في الحفظ إلى API:', error);
+                showNotification('❌ خطأ في الحفظ: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        async function testApiConnection() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            
+            if (!apiUrl) {
+                showNotification('⚠️ أدخل عنوان API أولاً', 'error');
+                return;
+            }
+            
+            showNotification('🔄 جاري اختبار الاتصال...', 'info');
+            
+            try {
+                const response = await fetch(apiUrl + '/test', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    showNotification('✅ تم الاتصال بالسيرفر بنجاح!', 'success');
+                } else {
+                    showNotification('❌ فشل الاتصال بالسيرفر', 'error');
+                }
+            } catch (error) {
+                showNotification('❌ خطأ في الاتصال: ' + error.message, 'error');
+            }
+        }
+
+        // ========== Microsoft Graph API ==========
+        
+        async function getGraphAccessToken() {
+            const tokenUrl = `https://login.microsoftonline.com/${config.tenantId}/oauth2/v2.0/token`;
+            
+            const body = new URLSearchParams({
+                client_id: config.clientId,
+                client_secret: config.clientSecret,
+                scope: 'https://graph.microsoft.com/.default',
+                grant_type: 'client_credentials'
+            });
+
+            const response = await fetch(tokenUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: body
+            });
+
+            if (!response.ok) {
+                throw new Error('فشل الحصول على Token');
+            }
+
+            const data = await response.json();
+            return data.access_token;
+        }
+
+        async function loadFromGraphAPI() {
+            if (!config.tenantId || !config.clientId || !config.clientSecret || !config.driveId || !config.fileId) {
+                showNotification('⚠️ لم يتم تكوين Graph API بالكامل', 'error');
+                return;
+            }
+
+            try {
+                const token = await getGraphAccessToken();
+                
+                const url = `https://graph.microsoft.com/v1.0/drives/${config.driveId}/items/${config.fileId}/workbook/worksheets/Sheet1/usedRange`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('فشل القراءة من Excel');
+                }
+
+                const data = await response.json();
+                // تحويل البيانات من Excel إلى complaints array
+                complaints = parseExcelData(data.values);
+                
+            } catch (error) {
+                console.error('خطأ في التحميل من Graph API:', error);
+                const saved = localStorage.getItem('complaints');
+                if (saved) complaints = JSON.parse(saved);
+                throw error;
+            }
+        }
+
+        async function saveToGraphAPI() {
+            if (!config.tenantId || !config.clientId || !config.clientSecret || !config.driveId || !config.fileId) {
+                showNotification('⚠️ لم يتم تكوين Graph API بالكامل', 'error');
+                return;
+            }
+
+            try {
+                // حفظ محلي أولاً
+                localStorage.setItem('complaints', JSON.stringify(complaints));
+
+                const token = await getGraphAccessToken();
+                
+                // تحويل complaints إلى صفوف Excel
+                const rows = complaintsToExcelRows();
+                
+                const url = `https://graph.microsoft.com/v1.0/drives/${config.driveId}/items/${config.fileId}/workbook/worksheets/Sheet1/range(address='A2:Z${rows.length + 1}')`;
+                
+                const response = await fetch(url, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        values: rows
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('فشل الكتابة إلى Excel');
+                }
+
+                showNotification('✅ تم الحفظ في Excel بنجاح', 'success');
+                
+            } catch (error) {
+                console.error('خطأ في الحفظ إلى Graph API:', error);
+                showNotification('❌ خطأ في الحفظ: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        function parseExcelData(rows) {
+            // تحويل صفوف Excel إلى complaints array
+            // أول صف هو العناوين، لذا نتخطاه
+            const result = [];
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (row[0]) { // إذا كان هناك ID
+                    result.push({
+                        id: row[0],
+                        studentName: row[1],
+                        curriculum: row[2],
+                        grade: row[3],
+                        section: row[4],
+                        subCurriculum: row[5],
+                        guardianName: row[6],
+                        relation: row[7],
+                        phone: row[8],
+                        email: row[9],
+                        type: row[10],
+                        department: row[11],
+                        priority: row[12],
+                        assignedTo: row[13],
+                        status: row[14],
+                        description: row[15],
+                        adminNotes: row[16],
+                        createdBy: row[17],
+                        createdByRole: row[18],
+                        createdAt: row[19],
+                        updatedAt: row[20]
+                    });
+                }
+            }
+            return result;
+        }
+
+        function complaintsToExcelRows() {
+            return complaints.map(c => [
+                c.id,
+                c.studentName,
+                c.curriculum,
+                c.grade,
+                c.section || '',
+                c.subCurriculum || '',
+                c.guardianName,
+                c.relation,
+                c.phone,
+                c.email || '',
+                c.type,
+                c.department,
+                c.priority || 'متوسط',
+                c.assignedTo || '',
+                c.status,
+                c.description,
+                c.adminNotes || '',
+                c.createdBy,
+                c.createdByRole,
+                c.createdAt,
+                c.updatedAt
+            ]);
+        }
+
+        // ========== وظائف المستخدمين ==========
 
         function saveUsers() {
             localStorage.setItem('systemUsers', JSON.stringify(users));
@@ -1100,6 +1522,8 @@
             document.body.classList.toggle('dark', isDark);
         }
 
+        // ========== الإعدادات ==========
+
         function showSettings() {
             if (currentUser.role !== 'admin') {
                 showNotification('❌ ليس لديك صلاحية للوصول إلى الإعدادات', 'error');
@@ -1107,20 +1531,97 @@
             }
             document.getElementById('settingsSection').classList.remove('hidden');
             document.getElementById('mainSection').classList.add('hidden');
+            
+            // تحميل القيم الحالية
             document.getElementById('storageMethod').value = config.storageMethod;
+            
+            if (config.flowUrl) document.getElementById('flowUrl').value = config.flowUrl;
+            if (config.apiUrl) document.getElementById('apiUrl').value = config.apiUrl;
+            if (config.tenantId) document.getElementById('tenantId').value = config.tenantId;
+            if (config.clientId) document.getElementById('clientId').value = config.clientId;
+            if (config.clientSecret) document.getElementById('clientSecret').value = config.clientSecret;
+            if (config.driveId) document.getElementById('driveId').value = config.driveId;
+            if (config.fileId) document.getElementById('fileId').value = config.fileId;
+            
+            updateStorageConfig();
+        }
+
+        function updateStorageConfig() {
+            const method = document.getElementById('storageMethod').value;
+            
+            // إخفاء جميع أقسام الإعدادات
+            document.getElementById('powerAutomateConfig').classList.add('hidden');
+            document.getElementById('apiConfig').classList.add('hidden');
+            document.getElementById('graphApiConfig').classList.add('hidden');
+            
+            // إظهار القسم المناسب
+            if (method === 'powerautomate') {
+                document.getElementById('powerAutomateConfig').classList.remove('hidden');
+            } else if (method === 'api') {
+                document.getElementById('apiConfig').classList.remove('hidden');
+            } else if (method === 'graphapi') {
+                document.getElementById('graphApiConfig').classList.remove('hidden');
+            }
         }
 
         function saveSettings() {
+            const oldMethod = config.storageMethod;
             config.storageMethod = document.getElementById('storageMethod').value;
+            
+            // حفظ إعدادات Power Automate
+            if (config.storageMethod === 'powerautomate') {
+                config.flowUrl = document.getElementById('flowUrl').value;
+                if (!config.flowUrl) {
+                    showNotification('⚠️ يرجى إدخال رابط Flow URL', 'error');
+                    return;
+                }
+            }
+            
+            // حفظ إعدادات API
+            if (config.storageMethod === 'api') {
+                config.apiUrl = document.getElementById('apiUrl').value;
+                if (!config.apiUrl) {
+                    showNotification('⚠️ يرجى إدخال عنوان السيرفر', 'error');
+                    return;
+                }
+            }
+            
+            // حفظ إعدادات Graph API
+            if (config.storageMethod === 'graphapi') {
+                config.tenantId = document.getElementById('tenantId').value;
+                config.clientId = document.getElementById('clientId').value;
+                config.clientSecret = document.getElementById('clientSecret').value;
+                config.driveId = document.getElementById('driveId').value;
+                config.fileId = document.getElementById('fileId').value;
+                
+                if (!config.tenantId || !config.clientId || !config.clientSecret || !config.driveId || !config.fileId) {
+                    showNotification('⚠️ يرجى ملء جميع حقول Graph API', 'error');
+                    return;
+                }
+            }
+            
             localStorage.setItem('systemConfig', JSON.stringify(config));
-            showNotification('✅ تم حفظ الإعدادات بنجاح', 'success');
-            hideSettings();
+            
+            if (oldMethod !== config.storageMethod) {
+                showNotification('✅ تم حفظ الإعدادات! سيتم إعادة تحميل البيانات...', 'success');
+                setTimeout(() => {
+                    loadData().then(() => {
+                        hideSettings();
+                        showNotification('✅ تم تحميل البيانات من المصدر الجديد', 'success');
+                    });
+                }, 1500);
+            } else {
+                showNotification('✅ تم حفظ الإعدادات بنجاح', 'success');
+                hideSettings();
+            }
         }
 
         function hideSettings() {
             document.getElementById('settingsSection').classList.add('hidden');
             document.getElementById('mainSection').classList.remove('hidden');
         }
+
+        // ========== وظائف النظام الرئيسية ==========
 
         function showTab(tab) {
             const tabs = document.querySelectorAll('.tab');
@@ -1284,7 +1785,7 @@
             }
         }
 
-        function submitComplaint() {
+        async function submitComplaint() {
             const complaintData = {
                 studentName: document.getElementById('studentName').value,
                 curriculum: document.getElementById('curriculum').value,
@@ -1304,59 +1805,69 @@
                 adminNotes: document.getElementById('adminNotes').value
             };
 
-            if (isEditMode && editingComplaintId) {
-                const index = complaints.findIndex(c => c.id === editingComplaintId);
-                if (index !== -1) {
-                    const oldComplaint = complaints[index];
-                    
-                    complaints[index] = {
-                        ...oldComplaint,
+            if (!complaintData.studentName || !complaintData.curriculum || !complaintData.grade || 
+                !complaintData.guardianName || !complaintData.phone || !complaintData.description) {
+                showNotification('⚠️ يرجى ملء جميع الحقول المطلوبة (*)', 'error');
+                return;
+            }
+
+            try {
+                if (isEditMode && editingComplaintId) {
+                    const index = complaints.findIndex(c => c.id === editingComplaintId);
+                    if (index !== -1) {
+                        const oldComplaint = complaints[index];
+                        
+                        complaints[index] = {
+                            ...oldComplaint,
+                            ...complaintData,
+                            id: oldComplaint.id,
+                            createdBy: oldComplaint.createdBy,
+                            createdByRole: oldComplaint.createdByRole,
+                            createdAt: oldComplaint.createdAt,
+                            updatedAt: new Date().toISOString(),
+                            activityLog: [
+                                ...(oldComplaint.activityLog || []),
+                                {
+                                    action: 'Updated',
+                                    user: currentUser.username,
+                                    role: currentUser.roleName,
+                                    timestamp: new Date().toISOString(),
+                                    changes: 'تم تعديل بيانات الشكوى'
+                                }
+                            ]
+                        };
+
+                        await saveData();
+                        showNotification(`✅ تم تعديل الشكوى ${editingComplaintId} بنجاح`, 'success');
+                        clearForm();
+                        setTimeout(() => showTab('view'), 1500);
+                    } else {
+                        showNotification('❌ لم يتم العثور على الشكوى', 'error');
+                    }
+                } else {
+                    const complaint = {
+                        id: `2025-${String(complaints.length + 1).padStart(4, '0')}`,
                         ...complaintData,
-                        id: oldComplaint.id,
-                        createdBy: oldComplaint.createdBy,
-                        createdByRole: oldComplaint.createdByRole,
-                        createdAt: oldComplaint.createdAt,
+                        createdBy: currentUser.username,
+                        createdByRole: currentUser.roleName,
+                        createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString(),
-                        activityLog: [
-                            ...(oldComplaint.activityLog || []),
-                            {
-                                action: 'Updated',
-                                user: currentUser.username,
-                                role: currentUser.roleName,
-                                timestamp: new Date().toISOString(),
-                                changes: 'تم تعديل بيانات الشكوى'
-                            }
-                        ]
+                        activityLog: [{
+                            action: 'Created',
+                            user: currentUser.username,
+                            role: currentUser.roleName,
+                            timestamp: new Date().toISOString()
+                        }]
                     };
 
-                    saveData();
-                    showNotification(`✅ تم تعديل الشكوى ${editingComplaintId} بنجاح`, 'success');
+                    complaints.push(complaint);
+                    await saveData();
+                    showNotification(`✅ تم تسجيل الشكوى! رقم: ${complaint.id}`, 'success');
                     clearForm();
                     setTimeout(() => showTab('view'), 1500);
-                } else {
-                    showNotification('❌ لم يتم العثور على الشكوى', 'error');
                 }
-            } else {
-                const complaint = {
-                    id: `2025-${String(complaints.length + 1).padStart(4, '0')}`,
-                    ...complaintData,
-                    createdBy: currentUser.username,
-                    createdByRole: currentUser.roleName,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    activityLog: [{
-                        action: 'Created',
-                        user: currentUser.username,
-                        role: currentUser.roleName,
-                        timestamp: new Date().toISOString()
-                    }]
-                };
-
-                complaints.push(complaint);
-                saveData();
-                showNotification(`✅ تم تسجيل الشكوى! رقم: ${complaint.id}`, 'success');
-                clearForm();
-                setTimeout(() => showTab('view'), 1500);
+            } catch (error) {
+                showNotification('❌ حدث خطأ أثناء الحفظ: ' + error.message, 'error');
             }
         }
 
@@ -1413,14 +1924,13 @@
             document.getElementById('complaintsTable').innerHTML = html;
         }
 
-         function filterComplaintsData() {
+        function filterComplaintsData() {
             const search = document.getElementById('searchFilter')?.value.toLowerCase() || '';
             const status = document.getElementById('statusFilter')?.value || '';
             const priority = document.getElementById('priorityFilter')?.value || '';
             const type = document.getElementById('typeFilter')?.value || '';
 
             return complaints.filter(c => {
-                // البحث في جميع الحقول
                 const matchSearch = !search || 
                     c.id.toLowerCase().includes(search) ||
                     c.studentName.toLowerCase().includes(search) ||
@@ -1520,14 +2030,15 @@
             document.body.insertAdjacentHTML('beforeend', html);
         }
 
-        function deleteComplaint(id) {
+        async function deleteComplaint(id) {
             if (currentUser.role !== 'admin') {
                 showNotification('❌ ليس لديك صلاحية', 'error');
                 return;
             }
             if (!confirm('⚠️ هل تريد حذف الشكوى؟')) return;
+            
             complaints = complaints.filter(c => c.id !== id);
-            saveData();
+            await saveData();
             renderComplaints();
             showNotification('✅ تم الحذف', 'success');
         }
@@ -1813,25 +2324,10 @@
             const ws = XLSX.utils.json_to_sheet(data);
             
             const colWidths = [
-                { wch: 15 }, // رقم الشكوى
-                { wch: 20 }, // اسم الطالب
-                { wch: 15 }, // رقم الطالب
-                { wch: 20 }, // النظام
-                { wch: 12 }, // الصف
-                { wch: 12 }, // الفصل
-                { wch: 20 }, // ولي الأمر
-                { wch: 15 }, // الهاتف
-                { wch: 25 }, // البريد
-                { wch: 15 }, // نوع المشكلة
-                { wch: 15 }, // القسم
-                { wch: 12 }, // الأولوية
-                { wch: 15 }, // الحالة
-                { wch: 20 }, // المسؤول
-                { wch: 40 }, // الوصف
-                { wch: 30 }, // ملاحظات الإدارة
-                { wch: 15 }, // أنشأها
-                { wch: 15 }, // تاريخ الإنشاء
-                { wch: 15 }  // آخر تحديث
+                { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, 
+                { wch: 20 }, { wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, 
+                { wch: 12 }, { wch: 15 }, { wch: 20 }, { wch: 40 }, { wch: 30 }, 
+                { wch: 15 }, { wch: 15 }, { wch: 15 }
             ];
             ws['!cols'] = colWidths;
 
@@ -1851,8 +2347,10 @@
             setTimeout(() => notif.remove(), 3000);
         }
 
-        loadData();
-        checkAuth();
+        // ========== التهيئة الأولية ==========
+        loadData().then(() => {
+            checkAuth();
+        });
     </script>
 </body>
 </html>
