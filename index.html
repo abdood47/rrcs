@@ -1413,14 +1413,30 @@
             document.getElementById('complaintsTable').innerHTML = html;
         }
 
-        function filterComplaintsData() {
+         function filterComplaintsData() {
             const search = document.getElementById('searchFilter')?.value.toLowerCase() || '';
             const status = document.getElementById('statusFilter')?.value || '';
             const priority = document.getElementById('priorityFilter')?.value || '';
             const type = document.getElementById('typeFilter')?.value || '';
 
             return complaints.filter(c => {
-                const matchSearch = !search || c.studentName.toLowerCase().includes(search) || c.id.toLowerCase().includes(search);
+                // البحث في جميع الحقول
+                const matchSearch = !search || 
+                    c.id.toLowerCase().includes(search) ||
+                    c.studentName.toLowerCase().includes(search) ||
+                    c.curriculum.toLowerCase().includes(search) ||
+                    c.grade.toLowerCase().includes(search) ||
+                    (c.section && c.section.toLowerCase().includes(search)) ||
+                    (c.subCurriculum && c.subCurriculum.toLowerCase().includes(search)) ||
+                    c.guardianName.toLowerCase().includes(search) ||
+                    c.phone.includes(search) ||
+                    (c.email && c.email.toLowerCase().includes(search)) ||
+                    c.type.toLowerCase().includes(search) ||
+                    c.department.toLowerCase().includes(search) ||
+                    (c.assignedTo && c.assignedTo.toLowerCase().includes(search)) ||
+                    c.description.toLowerCase().includes(search) ||
+                    (c.adminNotes && c.adminNotes.toLowerCase().includes(search));
+                    
                 const matchStatus = !status || c.status === status;
                 const matchPriority = !priority || (c.priority || 'متوسط') === priority;
                 const matchType = !type || c.type === type;
